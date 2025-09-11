@@ -1,19 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace TaskService.Controllers
+namespace MonitorService.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+    public class TaskController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
         {
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        private readonly ILogger<WeatherForecastController> _logger;
+        private readonly ILogger<TaskController> _logger;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public TaskController(ILogger<TaskController> logger)
         {
             _logger = logger;
         }

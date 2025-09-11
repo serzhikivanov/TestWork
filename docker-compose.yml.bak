@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: task_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tasks_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  taskmicroservice:
+    build:
+      context: .
+      dockerfile: ./TaskService/Dockerfile
+    container_name: task_service
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=tasks_db;Username=postgres;Password=postgres"
+    ports:
+      - "5000:80"
+
+volumes:
+  postgres_data:
