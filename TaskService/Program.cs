@@ -1,7 +1,4 @@
 using TaskService.Domain.Data;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using TaskService.Services;
 using Polly;
@@ -62,8 +59,7 @@ using (var scope = app.Services.CreateScope())
                 });
          */
 
-        retry.Execute(() => db.Database.Migrate());
-        //db.Database.Migrate();
+        retry.Execute(db.Database.Migrate);
     }
     catch (Exception ex)
     {
