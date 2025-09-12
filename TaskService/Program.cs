@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using TaskService.Services;
 using Polly;
 using Npgsql;
+using TaskService.Messaging;
+using TaskService.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +19,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
+
 // Memory cache for currency caching
 builder.Services.AddMemoryCache();
+
 // HttpClient for external API
 builder.Services.AddHttpClient("cbr", client =>
 {
@@ -27,9 +31,10 @@ builder.Services.AddHttpClient("cbr", client =>
 // Add background service
 builder.Services.AddHostedService<OverdueCheckerService>();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<IMqMessagePublisher, RabbitmqPublisher>();
 
 var app = builder.Build();
 
@@ -42,8 +47,9 @@ using (var scope = app.Services.CreateScope())
         var retry = Policy.Handle<NpgsqlException>()
                   .WaitAndRetry(5, retryAttempt => TimeSpan.FromSeconds(5));
 
+        #region OPTIONAL retry to avoid warning on initial database connection 
         /*
-         OPTIONAL retry to avoid warning on initial database connection 
+         
          The "relation "__EFMigrationsHistory" does not exist" message only happens the very first time on a new database
 
         var retry = Policy
@@ -58,7 +64,8 @@ using (var scope = app.Services.CreateScope())
                     logger.LogWarning(ex, "Retrying database migration...");
                 });
          */
-
+        #endregion
+        
         retry.Execute(db.Database.Migrate);
     }
     catch (Exception ex)

@@ -14,5 +14,10 @@ namespace TaskService.Domain.DTOs
         public DateTime DueDate { get; set; }
 
         public JobTaskStatus Status { get; set; } = JobTaskStatus.New;
+
+        public override string ToString()
+        {
+            return $"{Title} - '{Description}' - {DueDate} - {Status}";
+        }
     }
 }

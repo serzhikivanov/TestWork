@@ -12,6 +12,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: task_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # RabbitMQ broker
+      - "15672:15672" # RabbitMQ management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+  
   taskmicroservice:
     build:
       context: .
@@ -20,11 +33,24 @@ services:
     restart: always
     depends_on:
       - postgres
+      - rabbitmq
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=tasks_db;Username=postgres;Password=postgres"
     ports:
       - "5000:8080"
+      
+  monitormicroservice:
+    build:
+      context: .
+      dockerfile: ./MonitorService/Dockerfile
+    container_name: monitor_service
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
 
 volumes:
   postgres_data:
+  rabbitmq_data:

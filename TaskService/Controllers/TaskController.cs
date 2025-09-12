@@ -23,8 +23,11 @@ namespace TaskService.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning($"Invalid task data - {dto}");
+                return BadRequest(ModelState);
+            }
 
             var task = new TaskModel
             {
@@ -34,10 +37,9 @@ namespace TaskService.Controllers
                 Status = dto.Status
             };
 
-
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
-
+            _logger.LogInformation($"Added new task {dto}");
 
             return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
         }
@@ -47,7 +49,9 @@ namespace TaskService.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var task = await _db.Tasks.FindAsync(id);
-            if (task == null) return NotFound();
+            if (task == null) 
+                return NotFound();
+
             return Ok(task);
         }
 
@@ -57,26 +61,26 @@ namespace TaskService.Controllers
         [HttpGet]
         public async Task<IActionResult> GetList([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] TaskStatus? status = null)
         {
-            if (page <= 0) page = 1;
-            if (pageSize <= 0 || pageSize > 100) pageSize = 20;
+            if (page <= 0) 
+                page = 1;
 
+            if (pageSize <= 0 || pageSize > 100) 
+                pageSize = 20;
 
             var query = _db.Tasks.AsQueryable();
-            if (status.HasValue) query = query.Where(t => (int)t.Status == (int)status.Value);
-
+            if (status.HasValue) 
+                query = query.Where(t => (int)t.Status == (int)status.Value);
 
             var total = await query.CountAsync();
             var items = await query
-            .OrderBy(t => t.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
+                .OrderBy(t => t.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             var result = new { total, page, pageSize, items };
             return Ok(result);
         }
-
 
         // PUT: api/tasks/{id}
         [HttpPut("{id:guid}")]
@@ -99,13 +103,11 @@ namespace TaskService.Controllers
                 updated = true;
             }
 
-
             if (dto.DueDate.HasValue && dto.DueDate.Value != task.DueDate)
             {
                 task.DueDate = dto.DueDate.Value;
                 updated = true;
             }
-
 
             if (dto.Status.HasValue && dto.Status.Value != task.Status)
             {
@@ -113,13 +115,12 @@ namespace TaskService.Controllers
                 updated = true;
             }
 
-
-            if (!updated) return BadRequest("No changes detected.");
+            if (!updated) 
+                return BadRequest("No changes detected.");
 
 
             task.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
-
 
             return Ok(task);
         }

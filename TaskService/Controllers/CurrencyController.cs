@@ -1,9 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace TaskService.Controllers
 {
@@ -11,12 +7,12 @@ namespace TaskService.Controllers
     [Route("api/currency")]
     public class CurrencyController : ControllerBase
     {
-        private readonly IMemoryCache _cache;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<CurrencyController> _logger;
         private const string CacheKey = "cbr_daily_json";
         private const string CbrUrl = "https://www.cbr-xml-daily.ru/daily_json.js";
 
+        private readonly IMemoryCache _cache;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<CurrencyController> _logger;
 
         public CurrencyController(IMemoryCache cache, IHttpClientFactory httpClientFactory, ILogger<CurrencyController> logger)
         {
@@ -24,7 +20,6 @@ namespace TaskService.Controllers
             _httpClientFactory = httpClientFactory;
             _logger = logger;
         }
-
 
         [HttpGet("rates")]
         public async Task<IActionResult> GetRates()
@@ -34,9 +29,7 @@ namespace TaskService.Controllers
                 return Content(cachedJson, "application/json");
             }
 
-
             var client = _httpClientFactory.CreateClient("cbr");
-
 
             // Simple retry policy (3 attempts) with small delays
             for (int attempt = 1; attempt <= 3; attempt++)
@@ -61,10 +54,8 @@ namespace TaskService.Controllers
                     _logger.LogWarning(ex, "HTTP error when fetching CBR (attempt {Attempt})", attempt);
                 }
 
-
                 await Task.Delay(TimeSpan.FromSeconds(1 * attempt));
             }
-
 
             return StatusCode(503, new { error = "Failed to fetch currency rates" });
         }

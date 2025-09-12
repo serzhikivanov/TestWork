@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TaskService.Domain.Data;
 using TaskService.Domain;
+using TaskService.Interfaces;
+using System.Threading.Tasks;
 
 
 namespace TaskService.Services
@@ -9,11 +11,13 @@ namespace TaskService.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<OverdueCheckerService> _logger;
+        private readonly IMqMessagePublisher _mqMessagePublisher;
 
-        public OverdueCheckerService(IServiceScopeFactory scopeFactory, ILogger<OverdueCheckerService> logger)
+        public OverdueCheckerService(IServiceScopeFactory scopeFactory, ILogger<OverdueCheckerService> logger, IMqMessagePublisher mqMessagePublisher)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _mqMessagePublisher = mqMessagePublisher;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -28,19 +32,26 @@ namespace TaskService.Services
             {
                 try
                 {
-                    var now = DateTime.UtcNow;
-                    var overdueTasks = await db.Tasks
-                        .Where(t => t.Status != JobTaskStatus.Completed && t.Status != JobTaskStatus.Overdue)
-                        .Where(t => t.DueDate < now)
-                        .ToListAsync(stoppingToken);
-
-                    foreach (var task in overdueTasks)
+                    if (_mqMessagePublisher.ConnectionReady)
                     {
-                        task.Status = JobTaskStatus.Overdue;
-                    }
+                        var now = DateTime.UtcNow;
+                        var overdueTasks = await db.Tasks
+                            .Where(t => t.Status != JobTaskStatus.Completed && t.Status != JobTaskStatus.Overdue)
+                            .Where(t => t.DueDate < now)
+                            .ToListAsync(stoppingToken);
 
-                    if (overdueTasks.Any())
-                        await db.SaveChangesAsync(stoppingToken);
+                        foreach (var task in overdueTasks)
+                        {
+                            task.Status = JobTaskStatus.Overdue;
+                            _logger.LogInformation($"Setting {task.Id} to overdue");
+                            _mqMessagePublisher.Publish("tasks.events", new { TaskId = task.Id, Action = "Overdue" });
+                        }
+
+                        if (overdueTasks.Any())
+                            await db.SaveChangesAsync(stoppingToken);
+                    }
+                    else
+                        _logger.LogWarning($"Waiting for RabbitMQ connection...");
                 }
                 catch (Exception ex)
                 {
