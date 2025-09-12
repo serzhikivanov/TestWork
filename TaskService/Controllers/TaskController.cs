@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TaskService.Domain;
 using TaskService.Domain.Data;
 using TaskService.Domain.DTOs;
 using TaskService.Domain.Models;
@@ -59,7 +60,7 @@ namespace TaskService.Controllers
         // supports pagination: ?page=1&pageSize=20
         // filter by status: ?status=New
         [HttpGet]
-        public async Task<IActionResult> GetList([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] TaskStatus? status = null)
+        public async Task<IActionResult> GetList([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] JobTaskStatus? status = null)
         {
             if (page <= 0) 
                 page = 1;
