@@ -6,9 +6,9 @@ namespace TaskService.Domain.DTOs
     {
         [MaxLength(200)]
         public string Title { get; set; }
-
+        
         public string Description { get; set; }
-
+        
         public DateTime? DueDate { get; set; }
 
         public JobTaskStatus? Status { get; set; }

@@ -1,12 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using TaskService.Domain.Data;
 using TaskService.Domain.DTOs;
 using TaskService.Domain.Models;
-using Microsoft.Extensions.Logging;
 
 namespace TaskService.Controllers
 {   
@@ -71,7 +67,7 @@ namespace TaskService.Controllers
 
             var total = await query.CountAsync();
             var items = await query
-            .OrderBy(t => t.DueDate)
+            .OrderBy(t => t.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

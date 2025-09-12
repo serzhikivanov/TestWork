@@ -1,12 +1,5 @@
-﻿
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Microsoft.EntityFrameworkCore;
 using TaskService.Domain.Data;
-using TaskService.Domain.Models;
 using TaskService.Domain;
 
 
@@ -17,13 +10,11 @@ namespace TaskService.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<OverdueCheckerService> _logger;
 
-
         public OverdueCheckerService(IServiceScopeFactory scopeFactory, ILogger<OverdueCheckerService> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
         }
-
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
