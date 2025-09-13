@@ -21,9 +21,6 @@ namespace TaskService.Unittests
             _sut = new RabbitmqPublisher(_logger.Object);
         }
 
-        //[TestCase(true, ExpectedResult = true)]
-        //[TestCase(false, ExpectedResult = false)]
-        
         [Test]
         public void PublishMessageWhenNotConnected_ReturnFalseNotCrash() 
         {
@@ -44,7 +41,7 @@ namespace TaskService.Unittests
             fInfo.SetValue(_sut, _mockChannel.Object);
             var result = _sut.Publish("tasks.events", new { TaskId = "FDCD6891-090D-4287-ABE7-DDC3E1922222", Action = "Overdue" });
 
-            Assert.That(result, $"Sending a task when not connected to MQ message service returned '{result}' instead of 'false'");
+            Assert.That(result, $"Sending a task when connected to MQ message service returned '{result}' instead of 'true'");
         }
     }
 }
