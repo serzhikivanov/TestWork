@@ -2,6 +2,7 @@ using TaskService.Domain.Data;
 using Microsoft.EntityFrameworkCore;
 using TaskService.Services;
 using Polly;
+using Prometheus;
 using Npgsql;
 using TaskService.Messaging;
 using TaskService.Interfaces;
@@ -87,5 +88,9 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Prometheus - adding metrics gathering and passing to Prometheus
+app.UseHttpMetrics();
+app.MapMetrics();
 
 app.Run();
