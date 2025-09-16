@@ -18,7 +18,6 @@ namespace MonitorService.Services
         public RabbitMqConsumer(ILogger<RabbitMqConsumer> logger)
         {
             _logger = logger;
-
             _connectionTask = Task.Run(() => ConnectAndStartConsumingAsync(_cts.Token), _cts.Token);
         }
 
@@ -38,7 +37,6 @@ namespace MonitorService.Services
                 {
                     _connection = factory.CreateConnection();
                     _channel = _connection.CreateModel();
-
                     _channel.QueueDeclare(queue: "tasks.events",
                                           durable: true,
                                           exclusive: false,
@@ -52,13 +50,10 @@ namespace MonitorService.Services
                         var json = Encoding.UTF8.GetString(body);
 
                         _logger.LogInformation("Consumed message: {Message}", json);
-
-                        // Optionally enqueue for further processing
                         _messageQueue.Enqueue(("tasks.events", json));
                     };
 
                     _channel.BasicConsume(queue: "tasks.events", autoAck: true, consumer: consumer);
-
                     _logger.LogInformation("RabbitMQ Consumer connected and started.");
                     break;
                 }
@@ -70,16 +65,17 @@ namespace MonitorService.Services
             }
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            // Consumer work is already started in ConnectAndStartConsumingAsync
-            return Task.CompletedTask;
-        }
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 
         public override void Dispose()
         {
             _cts.Cancel();
-            try { _connectionTask.Wait(); } catch { /* ignore */ }
+            try 
+            { 
+                _connectionTask.Wait(); 
+            } 
+            catch { /* ignore */ }
+
             _channel?.Close();
             _connection?.Close();
             _cts.Dispose();
