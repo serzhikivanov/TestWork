@@ -3,83 +3,82 @@ using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace MonitorService.Services
+namespace MonitorService.Services;
+
+public class RabbitMqConsumer : BackgroundService
 {
-    public class RabbitMqConsumer : BackgroundService
+    private readonly ILogger<RabbitMqConsumer> _logger;
+    private readonly ConcurrentQueue<(string Queue, string Payload)> _messageQueue = new();
+    private readonly CancellationTokenSource _cts = new();
+    private readonly Task _connectionTask;
+
+    private IConnection? _connection;
+    private IModel? _channel;
+
+    public RabbitMqConsumer(ILogger<RabbitMqConsumer> logger)
     {
-        private readonly ILogger<RabbitMqConsumer> _logger;
-        private readonly ConcurrentQueue<(string Queue, string Payload)> _messageQueue = new();
-        private readonly CancellationTokenSource _cts = new();
-        private readonly Task _connectionTask;
+        _logger = logger;
+        _connectionTask = Task.Run(() => ConnectAndStartConsumingAsync(_cts.Token), _cts.Token);
+    }
 
-        private IConnection? _connection;
-        private IModel? _channel;
-
-        public RabbitMqConsumer(ILogger<RabbitMqConsumer> logger)
+    private async Task ConnectAndStartConsumingAsync(CancellationToken cancellationToken)
+    {
+        var factory = new ConnectionFactory
         {
-            _logger = logger;
-            _connectionTask = Task.Run(() => ConnectAndStartConsumingAsync(_cts.Token), _cts.Token);
-        }
+            HostName = "rabbitmq",
+            Port = 5672,
+            UserName = "guest",
+            Password = "guest"
+        };
 
-        private async Task ConnectAndStartConsumingAsync(CancellationToken cancellationToken)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var factory = new ConnectionFactory
+            try
             {
-                HostName = "rabbitmq",
-                Port = 5672,
-                UserName = "guest",
-                Password = "guest"
-            };
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+                _channel.QueueDeclare(queue: "tasks.events",
+                                      durable: true,
+                                      exclusive: false,
+                                      autoDelete: false,
+                                      arguments: null);
 
-            while (!cancellationToken.IsCancellationRequested)
+                var consumer = new EventingBasicConsumer(_channel);
+                consumer.Received += (model, ea) =>
+                {
+                    var body = ea.Body.ToArray();
+                    var json = Encoding.UTF8.GetString(body);
+
+                    _logger.LogInformation("Consumed message: {Message}", json);
+                    _messageQueue.Enqueue(("tasks.events", json));
+                };
+
+                _channel.BasicConsume(queue: "tasks.events", autoAck: true, consumer: consumer);
+                _logger.LogInformation("RabbitMQ Consumer connected and started.");
+                break;
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    _connection = factory.CreateConnection();
-                    _channel = _connection.CreateModel();
-                    _channel.QueueDeclare(queue: "tasks.events",
-                                          durable: true,
-                                          exclusive: false,
-                                          autoDelete: false,
-                                          arguments: null);
-
-                    var consumer = new EventingBasicConsumer(_channel);
-                    consumer.Received += (model, ea) =>
-                    {
-                        var body = ea.Body.ToArray();
-                        var json = Encoding.UTF8.GetString(body);
-
-                        _logger.LogInformation("Consumed message: {Message}", json);
-                        _messageQueue.Enqueue(("tasks.events", json));
-                    };
-
-                    _channel.BasicConsume(queue: "tasks.events", autoAck: true, consumer: consumer);
-                    _logger.LogInformation("RabbitMQ Consumer connected and started.");
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning("Failed to connect to RabbitMQ, retrying - {0}", ex.Message);
-                    await Task.Delay(1000, cancellationToken);
-                }
+                _logger.LogWarning("Failed to connect to RabbitMQ, retrying - {0}", ex.Message);
+                await Task.Delay(1000, cancellationToken);
             }
         }
+    }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 
-        public override void Dispose()
-        {
-            _cts.Cancel();
-            try 
-            { 
-                _connectionTask.Wait(); 
-            } 
-            catch { /* ignore */ }
+    public override void Dispose()
+    {
+        _cts.Cancel();
+        try 
+        { 
+            _connectionTask.Wait(); 
+        } 
+        catch { /* ignore */ }
 
-            _channel?.Close();
-            _connection?.Close();
-            _cts.Dispose();
-            base.Dispose();
-        }
+        _channel?.Close();
+        _connection?.Close();
+        _cts.Dispose();
+        base.Dispose();
     }
 }
